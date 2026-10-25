@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OlipeStore – Contas de Blox Fruits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#120a2e;--panel:#1d1250;--line:#3a2a85;--gold:#ffc928;--teal:#13d6c8;--txt:#f6f1ff;--mut:#a99ed6;--red:#ff5c33}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 70% -10%,#3b238f 0,var(--bg) 55%) fixed;color:var(--txt);font-family:Sora,system-ui,sans-serif;line-height:1.5}
+a{color:inherit}
+button,input,textarea,select{font:inherit}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+header{display:flex;align-items:center;gap:12px;padding:14px 5vw;border-bottom:1px solid var(--line);position:sticky;top:0;background:#120a2eee;backdrop-filter:blur(8px);z-index:5;flex-wrap:wrap}
+.brand{font-weight:800;font-size:1.5rem;cursor:pointer;margin-right:auto}.brand b{color:var(--gold)}.brand small{color:var(--teal);font-weight:600}
+.btn{border:0;border-radius:10px;padding:10px 18px;font-weight:600;cursor:pointer;background:var(--panel);color:var(--txt);border:1px solid var(--line)}
+.btn.gold{background:var(--gold);color:#241500;border-color:var(--gold)}.btn.teal{background:var(--teal);color:#002e2b;border-color:var(--teal)}.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}.sm{padding:6px 12px;font-size:.85rem}
+main{padding:28px 5vw 60px;max-width:1200px;margin:auto}
+h1{font-size:clamp(1.8rem,4vw,2.8rem);margin:0 0 6px;line-height:1.1}h2{margin:0 0 14px}
+.sub{color:var(--mut);margin:0 0 26px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column}
+.card:hover{border-color:var(--gold)}
+.card img{width:100%;aspect-ratio:16/10;object-fit:cover;background:#0b0620}
+.card .in{padding:14px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
+.price{font-size:1.5rem;font-weight:800;color:var(--gold)}.old{text-decoration:line-through;color:var(--mut);font-size:.95rem;margin-right:8px;font-weight:400}
+.tag{display:inline-block;font-size:.75rem;padding:2px 10px;border-radius:99px;background:var(--line)}
+.tag.sold{background:var(--red)}.tag.reserved{background:#8a6d00}.tag.paid{background:#176f9c}.tag.delivered{background:#1a8f4d}.tag.pending{background:#8a6d00}.tag.cancelled{background:#555}
+.modal{position:fixed;inset:0;background:#000a;display:flex;align-items:flex-start;justify-content:center;padding:4vh 3vw;overflow:auto;z-index:20}
+.box{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:22px;width:min(760px,100%);position:relative}
+.x{position:absolute;right:12px;top:10px}
+label{display:block;font-size:.85rem;color:var(--mut);margin:12px 0 4px}
+input,textarea,select{width:100%;background:#0b0620;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.gal{display:flex;gap:8px;overflow-x:auto;margin:12px 0}.gal img{height:150px;border-radius:10px;cursor:zoom-in;border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pix{background:#0b0620;border:1px dashed var(--gold);border-radius:12px;padding:14px;word-break:break-all;font-weight:600;margin:10px 0}
+table{width:100%;border-collapse:collapse}td,th{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:.9rem}
+.tabs{display:flex;gap:8px;margin-bottom:18px}.tabs .btn.on{background:var(--gold);color:#241500}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--teal);color:#002e2b;padding:10px 18px;border-radius:10px;font-weight:600;z-index:50}
+.err{color:#ff9d85;font-size:.9rem;margin-top:8px}.empty{color:var(--mut);padding:30px 0}
+@media (prefers-reduced-motion:no-preference){.modal{animation:f .15s}@keyframes f{from{opacity:0}}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand" onclick="go('home')" style="display:flex;align-items:center;gap:10px"><img src="logo.png" alt="OlipeStore" width="52" height="52">Olipe<b>.</b><small>store</small></div>
+  <div id="nav" class="row"></div>
+</header>
+<main id="app"></main>
+<div id="layer"></div>
+
+<script>
+// ====== CONFIGURE AQUI ======
+const CONFIG = {
+  SUPABASE_URL: "https://wchogaofyqheurhnswah.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjaG9nYW9meXFoZXVyaG5zd2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NTMzMDUsImV4cCI6MjEwODUyOTMwNX0.kdyRRdfq8gMNcLbqZsgCiY4KsYN6MXlf3ikFbzfPD60",
+  PIX_KEY: "felipegynlopess@gmail.com",
+  PIX_NAME: "Tais De Fatima",
+  WHATSAPP: "5562999265922" // só números, com 55 + DDD. Ex.: 5562999999999
+};
+// ============================
+
+const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const brl = n => Number(n).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+const ST = {available:"Disponível", reserved:"Reservada", sold:"Vendida", pending:"Aguardando pagamento", paid:"Pago – entrega em andamento", delivered:"Entregue", cancelled:"Cancelado"};
+let user = null, admin = false, products = [], view = "home", tab = "orders";
+
+function toast(m){ const t=document.createElement("div"); t.className="toast"; t.textContent=m; document.body.append(t); setTimeout(()=>t.remove(),2800); }
+function modal(html){ $("#layer").innerHTML = `<div class="modal" onclick="if(event.target===this)closeM()"><div class="box"><button class="btn sm x" onclick="closeM()" aria-label="Fechar">Fechar</button>${html}</div></div>`; }
+function closeM(){ $("#layer").innerHTML = ""; }
+function go(v){ view = v; render(); window.scrollTo(0,0); }
+
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  await setUser(session?.user);
+  sb.auth.onAuthStateChange((_e, s) => setUser(s?.user));
+}
+async function setUser(u){
+  user = u || null; admin = false;
+  if (user){ const { data } = await sb.from("profiles").select("is_admin").eq("id", user.id).maybeSingle(); admin = !!data?.is_admin; }
+  if (!user && ["orders","admin"].includes(view)) view = "home";
+  await loadProducts(); render();
+}
+async function loadProducts(){
+  const { data } = await sb.from("products").select("*").order("created_at", {ascending:false});
+  products = data || [];
+}
+
+function render(){
+  $("#nav").innerHTML = user
+    ? `<button class="btn" onclick="go('home')">Contas</button><button class="btn" onclick="go('orders')">Meus pedidos</button>${admin?`<button class="btn gold" onclick="go('admin')">Painel admin</button>`:""}<button class="btn" onclick="logout()">Sair</button>`
+    : `<button class="btn gold" onclick="authModal('login')">Entrar</button><button class="btn" onclick="authModal('signup')">Criar conta</button>`;
+  ({home, orders:ordersView, admin:adminView}[view] || home)();
+}
+
+/* ---------- Vitrine ---------- */
+function home(){
+  $("#app").innerHTML = `<h1>Contas de Blox Fruits prontas para jogar</h1><p class="sub">Escolha a conta, pague por Pix e receba os dados de acesso depois da confirmação.</p>
+  <div class="grid">${products.map(p => `<article class="card" onclick="openProduct('${p.id}')">
+    ${p.images[0] ? `<img src="${esc(p.images[0])}" alt="${esc(p.title)}" loading="lazy">` : `<img alt="">`}
+    <div class="in"><span class="tag ${p.status}">${ST[p.status]}</span><strong>${esc(p.title)}</strong>
+    <div class="price">${p.old_price ? `<span class="old">${brl(p.old_price)}</span>` : ""}${brl(p.price)}</div></div></article>`).join("") || `<p class="empty">Nenhuma conta cadastrada ainda.</p>`}</div>`;
+}
+function openProduct(id){
+  const p = products.find(x => x.id === id);
+  modal(`<h2>${esc(p.title)}</h2><span class="tag ${p.status}">${ST[p.status]}</span>
+  <div class="gal">${p.images.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt=""></a>`).join("")}</div>
+  <p style="white-space:pre-wrap">${esc(p.description)}</p>
+  <div class="price">${p.old_price ? `<span class="old">${brl(p.old_price)}</span>` : ""}${brl(p.price)}</div>
+  <div class="row" style="margin-top:14px"><button class="btn gold" ${p.status!=="available"?"disabled":""} onclick="buy('${p.id}')">Comprar esta conta</button></div><div id="msg" class="err"></div>`);
+}
+async function buy(id){
+  if (!user){ authModal("login", "Entre ou crie uma conta para comprar."); return; }
+  const { data, error } = await sb.rpc("create_order", { p_product: id });
+  if (error){ $("#msg").textContent = error.message; return; }
+  await loadProducts(); render(); payModal(data, products.find(p => p.id === id));
+}
+function payModal(orderId, p){
+  const text = encodeURIComponent(`Olá! Fiz o pedido #${orderId} da conta "${p.title}" (${brl(p.price)}) e já enviei o Pix.`);
+  modal(`<h2>Pedido #${orderId} criado</h2><p>1. Faça o Pix de <b>${brl(p.price)}</b> para a chave abaixo (${esc(CONFIG.PIX_NAME)}):</p>
+  <div class="pix" id="pixk">${esc(CONFIG.PIX_KEY)}</div>
+  <div class="row"><button class="btn teal" onclick="navigator.clipboard.writeText(CONFIG.PIX_KEY).then(()=>toast('Chave copiada'))">Copiar chave Pix</button>
+  <a class="btn gold" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/${CONFIG.WHATSAPP}?text=${text}">2. Enviar comprovante no WhatsApp</a></div>
+  <p class="sub" style="margin-top:14px">Quando o pagamento for confirmado, os dados da conta aparecem em <b>Meus pedidos</b>.</p>`);
+}
+
+/* ---------- Login ---------- */
+function authModal(mode, note=""){
+  const su = mode === "signup";
+  modal(`<img src="logo.png" alt="OlipeStore" width="110" height="110" style="display:block;margin:0 auto 8px"><h2 style="text-align:center">${su?"Criar conta":"Entrar"}</h2><p class="sub">${esc(note)}</p>
+  <label for="em">E-mail</label><input id="em" type="email" autocomplete="email">
+  <label for="pw">Senha ${su?"(mínimo 6 caracteres)":""}</label><input id="pw" type="password" autocomplete="${su?"new-password":"current-password"}">
+  <div id="msg" class="err"></div>
+  <div class="row" style="margin-top:14px"><button class="btn gold" onclick="doAuth('${mode}')">${su?"Criar conta":"Entrar"}</button>
+  <button class="btn" onclick="authModal('${su?"login":"signup"}')">${su?"Já tenho conta":"Criar conta nova"}</button></div>`);
+}
+async function doAuth(mode){
+  const email = $("#em").value.trim(), password = $("#pw").value;
+  const { data, error } = mode === "signup" ? await sb.auth.signUp({email, password}) : await sb.auth.signInWithPassword({email, password});
+  if (error){ $("#msg").textContent = error.message; return; }
+  if (mode === "signup" && !data.session){ $("#msg").textContent = "Conta criada! Confirme o e-mail que enviamos e depois entre."; return; }
+  closeM(); toast("Bem-vindo!");
+}
+async function logout(){ await sb.auth.signOut(); toast("Você saiu"); }
+
+/* ---------- Meus pedidos ---------- */
+async function ordersView(){
+  const { data } = await sb.from("orders").select("*").eq("user_id", user.id).order("id", {ascending:false});
+  $("#app").innerHTML = `<h1>Meus pedidos</h1><p class="sub">Acompanhe o pagamento e veja os dados da conta quando for entregue.</p>` +
+    ((data||[]).map(o => { const p = products.find(x => x.id === o.product_id);
+      return `<div class="card" style="cursor:default;margin-bottom:14px"><div class="in"><div class="row"><b>Pedido #${o.id}</b><span class="tag ${o.status}">${ST[o.status]}</span></div>
+      <div>${esc(p?.title)} – ${p?brl(p.price):""}</div>
+      ${o.status==="pending" && p ? `<div><button class="btn sm teal" onclick='payModal(${o.id}, ${JSON.stringify({title:p.title,price:p.price}).replace(/'/g,"&#39;")})'>Ver chave Pix</button></div>`:""}
+      ${o.status==="delivered" ? `<div class="pix" style="white-space:pre-wrap">${esc(o.delivery_info)}</div>`:""}</div></div>`; }).join("") || `<p class="empty">Você ainda não fez nenhum pedido.</p>`);
+}
+
+/* ---------- Painel admin ---------- */
+async function adminView(){
+  if (!admin){ go("home"); return; }
+  $("#app").innerHTML = `<h1>Painel admin</h1><div class="tabs"><button class="btn ${tab==="orders"?"on":""}" onclick="tab='orders';render()">Pedidos</button><button class="btn ${tab==="products"?"on":""}" onclick="tab='products';render()">Contas</button></div><div id="adm"></div>`;
+  tab === "orders" ? adminOrders() : adminProducts();
+}
+async function adminOrders(){
+  const { data:os } = await sb.from("orders").select("*").order("id", {ascending:false});
+  const { data:ps } = await sb.from("profiles").select("id,email");
+  const mail = id => ps?.find(x => x.id === id)?.email;
+  $("#adm").innerHTML = `<div style="overflow-x:auto"><table><tr><th>#</th><th>Cliente</th><th>Conta</th><th>Status</th><th>Ação</th></tr>` +
+  (os||[]).map(o => { const p = products.find(x => x.id === o.product_id);
+    return `<tr><td>${o.id}</td><td>${esc(mail(o.user_id))}</td><td>${esc(p?.title)}<br>${p?brl(p.price):""}</td><td><span class="tag ${o.status}">${ST[o.status]}</span></td><td>
+    ${o.status==="pending" ? `<button class="btn sm teal" onclick="setOrder(${o.id},'paid')">Confirmar pagamento</button> <button class="btn sm" onclick="setOrder(${o.id},'cancelled','${o.product_id}')">Cancelar</button>` : ""}
+    ${o.status==="paid" ? `<textarea id="d${o.id}" rows="3" placeholder="Login, senha e instruções da conta"></textarea><button class="btn sm gold" onclick="deliver(${o.id},'${o.product_id}')">Entregar</button>` : ""}
+    ${o.status==="delivered" ? `<small style="white-space:pre-wrap;color:var(--mut)">${esc(o.delivery_info)}</small>` : ""}</td></tr>`; }).join("") + `</table></div>`;
+}
+async function setOrder(id, status, pid){
+  await sb.from("orders").update({status}).eq("id", id);
+  if (status === "cancelled") await sb.from("products").update({status:"available"}).eq("id", pid);
+  await loadProducts(); render(); toast("Atualizado");
+}
+async function deliver(id, pid){
+  const info = $("#d"+id).value.trim(); if (!info) return toast("Escreva os dados da conta");
+  await sb.from("orders").update({status:"delivered", delivery_info:info}).eq("id", id);
+  await sb.from("products").update({status:"sold"}).eq("id", pid);
+  await loadProducts(); render(); toast("Entregue ao cliente");
+}
+function adminProducts(){
+  $("#adm").innerHTML = `<button class="btn gold" onclick="productForm()">Adicionar conta</button><div class="grid" style="margin-top:18px">${products.map(p => `<div class="card" style="cursor:default">
+    ${p.images[0]?`<img src="${esc(p.images[0])}" alt="">`:""}<div class="in"><span class="tag ${p.status}">${ST[p.status]}</span><b>${esc(p.title)}</b><div class="price">${brl(p.price)}</div>
+    <div class="row"><button class="btn sm" onclick="productForm('${p.id}')">Editar</button><button class="btn sm red" onclick="delProduct('${p.id}')">Excluir</button></div></div></div>`).join("")}</div>`;
+}
+function productForm(id){
+  const p = products.find(x => x.id === id) || {title:"", description:"", price:"", old_price:"", images:[], status:"available"};
+  modal(`<h2>${id?"Editar conta":"Nova conta"}</h2>
+  <label>Título</label><input id="f_t" value="${esc(p.title)}" placeholder="Lv 2970 • Shark V4 • Human V4 • Anjo">
+  <label>Descrição (o que a conta tem)</label><textarea id="f_d" rows="5">${esc(p.description)}</textarea>
+  <div class="row"><div style="flex:1"><label>Preço (R$)</label><input id="f_p" type="number" step="0.01" value="${p.price}"></div><div style="flex:1"><label>Preço antigo (riscado)</label><input id="f_o" type="number" step="0.01" value="${p.old_price ?? ""}"></div></div>
+  <label>Status</label><select id="f_s">${["available","reserved","sold"].map(s=>`<option value="${s}" ${p.status===s?"selected":""}>${ST[s]}</option>`).join("")}</select>
+  <label>Fotos (pode escolher várias; as atuais são mantidas)</label><input id="f_i" type="file" accept="image/*" multiple>
+  <div id="msg" class="err"></div><div class="row" style="margin-top:14px"><button class="btn gold" onclick="saveProduct('${id||""}')">Salvar</button></div>`);
+}
+async function saveProduct(id){
+  const old = products.find(x => x.id === id), images = [...(old?.images || [])];
+  for (const f of $("#f_i").files){
+    const path = `${Date.now()}-${f.name.replace(/[^\w.]/g,"_")}`;
+    const { error } = await sb.storage.from("products").upload(path, f);
+    if (error){ $("#msg").textContent = error.message; return; }
+    images.push(sb.storage.from("products").getPublicUrl(path).data.publicUrl);
+  }
+  const row = { title:$("#f_t").value.trim(), description:$("#f_d").value, price:+$("#f_p").value, old_price:$("#f_o").value ? +$("#f_o").value : null, status:$("#f_s").value, images };
+  if (!row.title || !row.price){ $("#msg").textContent = "Preencha título e preço."; return; }
+  const { error } = id ? await sb.from("products").update(row).eq("id", id) : await sb.from("products").insert(row);
+  if (error){ $("#msg").textContent = error.message; return; }
+  closeM(); await loadProducts(); render(); toast("Conta salva");
+}
+async function delProduct(id){
+  if (!confirm("Excluir esta conta?")) return;
+  const { error } = await sb.from("products").delete().eq("id", id);
+  if (error) return toast("Não dá para excluir: já existe pedido ligado a ela. Marque como Vendida.");
+  await loadProducts(); render();
+}
+init();
+</script>
+</body>
+</html>
